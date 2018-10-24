@@ -28,7 +28,7 @@ impl DenoPermissions {
     };
     // TODO get location (where access occurred)
     let r = permission_prompt(format!(
-      "Deno requests write access to \"{}\".",
+      "🔐 Deno requests write access to \"{}\".",
       filename
     ));;
     if r.is_ok() {
@@ -43,7 +43,7 @@ impl DenoPermissions {
     };
     // TODO get location (where access occurred)
     let r = permission_prompt(format!(
-      "Deno requests network access to \"{}\".",
+      "🔐 Deno requests network access to \"{}\".",
       domain_name
     ));
     if r.is_ok() {
@@ -58,7 +58,7 @@ impl DenoPermissions {
     };
     // TODO get location (where access occurred)
     let r = permission_prompt(
-      "Deno requests access to environment variables.".to_string(),
+      "🔐 Deno requests access to environment variables.".to_string(),
     );
     if r.is_ok() {
       self.allow_env = true;
