@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import os
 import pty
 import select
@@ -63,82 +64,78 @@ class Prompt(object):
 
     def warm_up(self):
         # ignore the ts compiling message
-        self.run('test_needs_write', b'', allow_write=True)
+        self.run('needsWrite', b'', allow_write=True)
 
     def test_write_yes(self):
-        code, stdout, stderr = self.run('test_needs_write', b'y\n')
+        code, stdout, stderr = self.run('needsWrite', b'y\n')
         assert code == 0
         assert stdout == b''
-        assert b'Deno requests write access to "make_temp". Grant? yN' in stderr
+        assert b'Deno requests write access' in stderr
 
     def test_write_arg(self):
-        code, stdout, stderr = self.run(
-            'test_needs_write', b'', allow_write=True)
+        code, stdout, stderr = self.run('needsWrite', b'', allow_write=True)
         assert code == 0
         assert stdout == b''
         assert stderr == b''
 
     def test_write_no(self):
-        code, stdout, stderr = self.run('test_needs_write', b'N\n')
+        code, stdout, stderr = self.run('needsWrite', b'N\n')
         assert code == 1
         # FIXME this error message should be in stderr
         assert b'PermissionDenied: permission denied' in stdout
-        assert b'Deno requests write access to "make_temp". Grant? yN' in stderr
+        assert b'Deno requests write access' in stderr
 
     def test_env_yes(self):
-        code, stdout, stderr = self.run('test_needs_env', b'y\n')
+        code, stdout, stderr = self.run('needsEnv', b'y\n')
         assert code == 0
         assert stdout == b''
-        assert b'Deno requests access to environment variables. Grant? yN' in stderr
+        assert b'Deno requests access to environment' in stderr
 
     def test_env_arg(self):
-        code, stdout, stderr = self.run('test_needs_env', b'', allow_env=True)
+        code, stdout, stderr = self.run('needsEnv', b'', allow_env=True)
         assert code == 0
         assert stdout == b''
         assert stderr == b''
 
     def test_env_no(self):
-        code, stdout, stderr = self.run('test_needs_env', b'N\n')
+        code, stdout, stderr = self.run('needsEnv', b'N\n')
         assert code == 1
         # FIXME this error message should be in stderr
         assert b'PermissionDenied: permission denied' in stdout
-        assert b'Deno requests access to environment variables. Grant? yN' in stderr
+        assert b'Deno requests access to environment' in stderr
 
     def test_net_yes(self):
-        code, stdout, stderr = self.run('test_needs_env', b'y\n')
+        code, stdout, stderr = self.run('needsEnv', b'y\n')
         assert code == 0
         assert stdout == b''
-        assert b'Deno requests access to environment variables. Grant? yN' in stderr
+        assert b'Deno requests access to environment' in stderr
 
     def test_net_arg(self):
-        code, stdout, stderr = self.run('test_needs_net', b'', allow_net=True)
+        code, stdout, stderr = self.run('needsNet', b'', allow_net=True)
         assert code == 0
         assert stdout == b''
         assert stderr == b''
 
     def test_net_no(self):
-        code, stdout, stderr = self.run('test_needs_net', b'N\n')
+        code, stdout, stderr = self.run('needsNet', b'N\n')
         assert code == 1
         # FIXME this error message should be in stderr
         assert b'PermissionDenied: permission denied' in stdout
-        assert b'Deno requests network access to "http://localhost:4545". Grant? yN' in stderr
-
-    def run_tests(self):
-        self.warm_up()
-        self.test_write_yes()
-        self.test_write_arg()
-        self.test_write_no()
-        self.test_env_yes()
-        self.test_env_arg()
-        self.test_env_no()
-        self.test_net_yes()
-        self.test_net_arg()
-        self.test_net_no()
+        assert b'Deno requests network access' in stderr
 
 
 def permission_prompt_test(deno_exe):
     p = Prompt(deno_exe)
-    p.run_tests()
+    p.warm_up()
+    p.test_write_yes()
+    p.test_write_arg()
+    p.test_write_no()
+    p.test_env_yes()
+    p.test_env_arg()
+    p.test_env_no()
+    p.test_net_yes()
+    p.test_net_arg()
+    p.test_net_no()
 
 
 if __name__ == "__main__":
