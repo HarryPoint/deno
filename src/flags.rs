@@ -6,9 +6,8 @@ use log;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::mem;
+use std::process::exit;
 use std::vec::Vec;
-
-use permissions::DenoPermissions;
 
 // Creates vector of strings, Vec<String>
 #[cfg(test)]
@@ -23,21 +22,24 @@ pub struct DenoFlags {
   pub version: bool,
   pub reload: bool,
   pub recompile: bool,
-  pub permissions: DenoPermissions,
+  pub allow_write: bool,
+  pub allow_net: bool,
+  pub allow_env: bool,
   pub deps_flag: bool,
   pub types_flag: bool,
 }
 
-
-impl DenoFlags {
-
-  pub fn set_log_level(&self) {
-    let mut log_level = log::LevelFilter::Info;
-    if self.log_debug {
-      log_level = log::LevelFilter::Debug;
-    }
-    log::set_max_level(log_level);
+pub fn process(flags: &DenoFlags, usage_string: String) {
+  if flags.help {
+    println!("{}", &usage_string);
+    exit(0);
   }
+
+  let mut log_level = log::LevelFilter::Info;
+  if flags.log_debug {
+    log_level = log::LevelFilter::Debug;
+  }
+  log::set_max_level(log_level);
 }
 
 pub fn get_usage(opts: &Options) -> String {
@@ -96,13 +98,13 @@ pub fn set_flags(
     flags.recompile = true;
   }
   if matches.opt_present("allow-write") {
-    flags.permissions.allow_write(true);
+    flags.allow_write = true;
   }
   if matches.opt_present("allow-net") {
-    flags.permissions.allow_net(true);
+    flags.allow_net = true;
   }
   if matches.opt_present("allow-env") {
-    flags.permissions.allow_env(true);
+    flags.allow_env = true;
   }
   if matches.opt_present("deps") {
     flags.deps_flag = true;
@@ -149,13 +151,11 @@ fn test_set_flags_3() {
     set_flags(svec!["deno", "-r", "--deps", "script.ts", "--allow-write"])
       .unwrap();
   assert_eq!(rest, svec!["deno", "script.ts"]);
-  let mut expected_permissions = DenoPermissions::default();
-  expected_permissions.allow_write(true);
   assert_eq!(
     flags,
     DenoFlags {
       reload: true,
-      permissions: expected_permissions,
+      allow_write: true,
       deps_flag: true,
       ..DenoFlags::default()
     }
@@ -167,14 +167,12 @@ fn test_set_flags_4() {
   let (flags, rest, _) =
     set_flags(svec!["deno", "-Dr", "script.ts", "--allow-write"]).unwrap();
   assert_eq!(rest, svec!["deno", "script.ts"]);
-  let mut expected_permissions = DenoPermissions::default();
-  expected_permissions.allow_write(true);
   assert_eq!(
     flags,
     DenoFlags {
       log_debug: true,
       reload: true,
-      permissions: expected_permissions,
+      allow_write: true,
       ..DenoFlags::default()
     }
   );

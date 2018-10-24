@@ -1,6 +1,5 @@
 // Copyright 2018 the Deno authors. All rights reserved. MIT license.
 use errors;
-use errors::permission_denied;
 use errors::{DenoError, DenoResult, ErrorKind};
 use fs as deno_fs;
 use isolate::Buf;
@@ -332,9 +331,8 @@ fn op_set_env(
   let inner = base.inner_as_set_env().unwrap();
   let key = inner.key().unwrap();
   let value = inner.value().unwrap();
-
-  if state.flags.permissions.check_env().is_err() {
-     return odd_future(permission_denied());
+  if let Err(e) = state.check_env() {
+    return odd_future(e);
   }
   std::env::set_var(key, value);
   ok_future(empty_buf())
@@ -348,8 +346,8 @@ fn op_env(
   assert_eq!(data.len(), 0);
   let cmd_id = base.cmd_id();
 
-  if state.flags.permissions.check_env().is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_env() {
+    return odd_future(e);
   }
 
   let builder = &mut FlatBufferBuilder::new();
@@ -398,8 +396,8 @@ fn op_fetch_req(
   let url = inner.url().unwrap();
 
   // FIXME use domain (or use this inside check_net)
-  if state.flags.permissions.check_net(url).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_net(url) {
+    return odd_future(e);
   }
 
   let url = url.parse::<hyper::Uri>().unwrap();
@@ -513,8 +511,8 @@ fn op_make_temp_dir(
   let cmd_id = base.cmd_id();
 
   // FIXME
-  if state.flags.permissions.check_write("make_temp").is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write("make_temp") {
+    return odd_future(e);
   }
 
   let dir = inner.dir().map(PathBuf::from);
@@ -562,8 +560,8 @@ fn op_mkdir(
   let mode = inner.mode();
   let path = String::from(inner.path().unwrap());
 
-  if state.flags.permissions.check_write(&path).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&path) {
+    return odd_future(e);
   }
   blocking!(base.sync(), || {
     debug!("op_mkdir {}", path);
@@ -739,8 +737,8 @@ fn op_remove(
   let path = PathBuf::from(path_);
   let recursive = inner.recursive();
 
-  if state.flags.permissions.check_write(&path_).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(path.to_str().unwrap()) {
+    return odd_future(e);
   }
 
   blocking!(base.sync(), || {
@@ -806,8 +804,8 @@ fn op_copy_file(
   let to_ = inner.to().unwrap();
   let to = PathBuf::from(to_);
 
-  if state.flags.permissions.check_write(&to_).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&to_) {
+    return odd_future(e);
   }
 
   debug!("op_copy_file {} {}", from.display(), to.display());
@@ -991,8 +989,8 @@ fn op_write_file(
   let filename = String::from(inner.filename().unwrap());
   let perm = inner.perm();
 
-  if state.flags.permissions.check_write(&filename).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&filename) {
+    return odd_future(e);
   }
 
   blocking!(base.sync(), || -> OpResult {
@@ -1012,8 +1010,8 @@ fn op_rename(
   let oldpath = PathBuf::from(inner.oldpath().unwrap());
   let newpath_ = inner.newpath().unwrap();
   let newpath = PathBuf::from(newpath_);
-  if state.flags.permissions.check_write(&newpath_).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&newpath_) {
+    return odd_future(e);
   }
   blocking!(base.sync(), || -> OpResult {
     debug!("op_rename {} {}", oldpath.display(), newpath.display());
@@ -1033,8 +1031,8 @@ fn op_symlink(
   let newname_ = inner.newname().unwrap();
   let newname = PathBuf::from(newname_);
 
-  if state.flags.permissions.check_write(&newname_).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&newname_) {
+    return odd_future(e);
   }
   // TODO Use type for Windows.
   if cfg!(windows) {
@@ -1096,8 +1094,8 @@ fn op_truncate(
   let filename = String::from(inner.name().unwrap());
   let len = inner.len();
 
-  if state.flags.permissions.check_write(&filename).is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_write(&filename) {
+    return odd_future(e);
   }
 
   blocking!(base.sync(), || {
@@ -1114,9 +1112,8 @@ fn op_listen(
   data: &'static mut [u8],
 ) -> Box<Op> {
   assert_eq!(data.len(), 0);
-  // FIXME
-  if state.flags.permissions.check_net("listen").is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_net("listen") {
+    return odd_future(e);
   }
 
   let cmd_id = base.cmd_id();
@@ -1181,8 +1178,8 @@ fn op_accept(
   data: &'static mut [u8],
 ) -> Box<Op> {
   assert_eq!(data.len(), 0);
-  if state.flags.permissions.check_net("accept").is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_net("accept") {
+    return odd_future(e);
   }
   let cmd_id = base.cmd_id();
   let inner = base.inner_as_accept().unwrap();
@@ -1207,8 +1204,8 @@ fn op_dial(
   data: &'static mut [u8],
 ) -> Box<Op> {
   assert_eq!(data.len(), 0);
-  if state.flags.permissions.check_net("dial").is_err() {
-    return odd_future(permission_denied());
+  if let Err(e) = state.check_net("dial") {
+    return odd_future(e);
   }
   let cmd_id = base.cmd_id();
   let inner = base.inner_as_dial().unwrap();

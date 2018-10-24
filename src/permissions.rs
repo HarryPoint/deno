@@ -1,56 +1,86 @@
 extern crate atty;
 
-use std::io;
-use std::io::Read;
-use errors::DenoResult;
+use flags::DenoFlags;
+
 use errors::permission_denied;
+use errors::DenoResult;
+use std::io;
 
 #[derive(Debug, Default, PartialEq)]
 pub struct DenoPermissions {
-  allow_write: bool,
-  allow_net: bool,
-  allow_env: bool,
+  pub allow_write: bool,
+  pub allow_net: bool,
+  pub allow_env: bool,
 }
 
 impl DenoPermissions {
-  pub fn check_write(&self, filename: &str) -> DenoResult<()> {
-    if self.allow_write { return Ok(()) };
+  pub fn new(flags: &DenoFlags) -> DenoPermissions {
+    DenoPermissions {
+      allow_write: flags.allow_write,
+      allow_env: flags.allow_env,
+      allow_net: flags.allow_net,
+    }
+  }
+
+  pub fn check_write(&mut self, filename: &str) -> DenoResult<()> {
+    if self.allow_write {
+      return Ok(());
+    };
     // TODO get location (where access occurred)
-    permission_prompt(format!("Deno requests write access to \"{}\".", filename))
+    let r = permission_prompt(format!(
+      "Deno requests write access to \"{}\".",
+      filename
+    ));;
+    if r.is_ok() {
+      self.allow_write = true;
+    }
+    r
   }
 
-  pub fn check_net(&self, domain_name: &str) -> DenoResult<()> {
-    if self.allow_net { return Ok(()) };
+  pub fn check_net(&mut self, domain_name: &str) -> DenoResult<()> {
+    if self.allow_net {
+      return Ok(());
+    };
     // TODO get location (where access occurred)
-    permission_prompt(format!("Deno requests network access to \"{}\".", domain_name))
+    let r = permission_prompt(format!(
+      "Deno requests network access to \"{}\".",
+      domain_name
+    ));
+    if r.is_ok() {
+      self.allow_net = true;
+    }
+    r
   }
 
-  pub fn check_env(&self) -> DenoResult<()> {
-    if self.allow_env { return Ok(()) };
+  pub fn check_env(&mut self) -> DenoResult<()> {
+    if self.allow_env {
+      return Ok(());
+    };
     // TODO get location (where access occurred)
-    permission_prompt("Deno requests access to environment variables.".to_string())
-  }
-
-  pub fn allow_write(&mut self, b: bool) -> () {
-    self.allow_write = b;
-  }
-
-  pub fn allow_net(&mut self, b: bool) -> () {
-    self.allow_net = b;
-  }
-
-  pub fn allow_env(&mut self, b: bool) -> () {
-    self.allow_env = b;
+    let r = permission_prompt(
+      "Deno requests access to environment variables.".to_string(),
+    );
+    if r.is_ok() {
+      self.allow_env = true;
+    }
+    r
   }
 }
 
 fn permission_prompt(message: String) -> DenoResult<()> {
-  if !atty::is(atty::Stream::Stdin) || !atty::is(atty::Stream::Stderr) { return Err(permission_denied()) };
+  if !atty::is(atty::Stream::Stdin) || !atty::is(atty::Stream::Stderr) {
+    return Err(permission_denied());
+  };
   // print to stderr so that if deno is > to a file this is still displayed.
-  eprint!("{} Grant? yN", message);
-  let mut buf = vec![0u8; 1];
-  io::stdin().read_exact(&mut buf)?;
-  let input = buf[0];
-  let is_yes = input == 'y' as u8 || input == 'Y' as u8;
-  if is_yes { Ok(()) } else { Err(permission_denied()) }
+  eprint!("{} Grant? [yN] ", message);
+  let mut input = String::new();
+  let stdin = io::stdin();
+  let _nread = stdin.read_line(&mut input)?;
+  let ch = input.chars().next().unwrap();
+  let is_yes = ch == 'y' || ch == 'Y';
+  if is_yes {
+    Ok(())
+  } else {
+    Err(permission_denied())
+  }
 }

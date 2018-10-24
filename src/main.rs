@@ -71,16 +71,13 @@ fn main() {
 
   log::set_logger(&LOGGER).unwrap();
   let args = env::args().collect();
-  let (flags, rest_argv, usage_string) = flags::set_flags(args).unwrap_or_else(|err| {
-    eprintln!("{}", err);
-    std::process::exit(1)
-  });
-  if flags.help {
-    println!("{}", usage_string);
-    std::process::exit(0);
-  }
+  let (flags, rest_argv, usage_string) =
+    flags::set_flags(args).unwrap_or_else(|err| {
+      eprintln!("{}", err);
+      std::process::exit(1)
+    });
   let mut isolate = isolate::Isolate::new(flags, rest_argv, ops::dispatch);
-  isolate.state.flags.set_log_level();
+  flags::process(&isolate.state.flags, usage_string);
   tokio_util::init(|| {
     isolate
       .execute("deno_main.js", "denoMain();")

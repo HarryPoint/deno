@@ -3,7 +3,7 @@ import pty
 import select
 import subprocess
 
-from util import build_path, executable_suffix 
+from util import build_path, executable_suffix
 
 PERMISSIONS_PROMPT_TEST_TS = "tools/permission_prompt_test.ts"
 
@@ -15,14 +15,12 @@ def tty_capture(cmd, bytes_input):
     """Capture the output of cmd with bytes_input to stdin,
     with stdin, stdout and stderr as TTYs."""
     mo, so = pty.openpty()  # provide tty to enable line-buffering
-    me, se = pty.openpty()  
-    mi, si = pty.openpty()  
+    me, se = pty.openpty()
+    mi, si = pty.openpty()
     fdmap = {mo: 'stdout', me: 'stderr', mi: 'stdin'}
 
     p = subprocess.Popen(
-        cmd,
-        bufsize=1, stdin=si, stdout=so, stderr=se, 
-        close_fds=True)
+        cmd, bufsize=1, stdin=si, stdout=so, stderr=se, close_fds=True)
     os.write(mi, bytes_input)
 
     timeout = .04  # seconds
@@ -47,8 +45,12 @@ class Prompt(object):
     def __init__(self, deno_exe):
         self.deno_exe = deno_exe
 
-    def run(self, arg, bytes_input,
-            allow_write=False, allow_net=False, allow_env=False):
+    def run(self,
+            arg,
+            bytes_input,
+            allow_write=False,
+            allow_net=False,
+            allow_env=False):
         "Returns (return_code, stdout, stderr)."
         cmd = [self.deno_exe, PERMISSIONS_PROMPT_TEST_TS, arg]
         if allow_write:
@@ -70,7 +72,8 @@ class Prompt(object):
         assert b'Deno requests write access to "make_temp". Grant? yN' in stderr
 
     def test_write_arg(self):
-        code, stdout, stderr = self.run('test_needs_write', b'', allow_write=True)
+        code, stdout, stderr = self.run(
+            'test_needs_write', b'', allow_write=True)
         assert code == 0
         assert stdout == b''
         assert stderr == b''
@@ -101,7 +104,6 @@ class Prompt(object):
         assert b'PermissionDenied: permission denied' in stdout
         assert b'Deno requests access to environment variables. Grant? yN' in stderr
 
-
     def test_net_yes(self):
         code, stdout, stderr = self.run('test_needs_env', b'y\n')
         assert code == 0
@@ -120,7 +122,6 @@ class Prompt(object):
         # FIXME this error message should be in stderr
         assert b'PermissionDenied: permission denied' in stdout
         assert b'Deno requests network access to "http://localhost:4545". Grant? yN' in stderr
-
 
     def run_tests(self):
         self.warm_up()
@@ -143,4 +144,3 @@ def permission_prompt_test(deno_exe):
 if __name__ == "__main__":
     deno_exe = os.path.join(build_path(), "deno" + executable_suffix)
     permission_prompt_test(deno_exe)
-
