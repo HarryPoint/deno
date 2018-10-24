@@ -126,7 +126,8 @@ def run_cargo():
     # else who tries to run sync_third_party.
     def delete_lockfile():
         lockfiles = find_exts(
-            path.join(rust_crates_path, "registry/index"), '.cargo-index-lock')
+            [path.join(rust_crates_path, "registry/index")],
+            ['.cargo-index-lock'])
         for lockfile in lockfiles:
             os.remove(lockfile)
 
